@@ -247,18 +247,29 @@ int main () {
     char title[50], desc[100];
     int durasiMenit;
 
-    //data awal
-    insert(root, 202512020700, "Basdat", "Temporer", 150);
-    insert(root, 202512020930, "Bela Negara", "Temporer", 150);
-    insert(root, 202512021200, "Istirahat", "Temporer", 60);
-    insert(root, 202512021500, "Kerkel", "Temporer", 120);
-    insert(root, 202512021700, "Istirahat", "Temporer", 120);
-    insert(root, 202512021900, "Belajar", "Temporer", 150);
-    insert(root, 202512030930, "Stakom", "Temporer", 150);
-    insert(root, 202512031300, "Pemlan", "Temporer", 150);
-    insert(root, 202512031530, "Kerkel", "Temporer", 120);
-    insert(root, 202512031900, "Belajar", "Temporer", 150);
+    // Data awal
+    Event dataAwal[] = { 
+    {202512020700, "Basdat", "Temporer", 150},
+    {202512020930, "BelaNegara", "Temporer", 150},
+    {202512021200, "Istirahat", "Temporer", 60},
+    {202512021500, "Kerkel", "Temporer", 120},
+    {202512021700, "Istirahat", "Temporer", 120},
+    {202512021900, "Belajar", "Temporer", 150},
+    {202512030930, "Stakom", "Temporer", 150},
+    {202512031300, "Pemlan", "Temporer", 150},
+    {202512031530, "Kerkel", "Temporer", 120},
+    {202512031900, "Belajar", "Temporer", 150},
+    };
+    
+    int jumlahAwal = sizeof(dataAwal)/sizeof(dataAwal[0]);
 
+    for (int i = 0; i < jumlahAwal; i++) {
+        root = insert   (root, dataAwal[i].timeID,
+                        dataAwal[i].title,
+                        dataAwal[i].description,
+                        dataAwal[i].durationMinutes);
+    };
+    
     printf("===================================\n");
     printf("   Penjadwalan dengan AVL Tree     \n");
     printf("===================================\n");
