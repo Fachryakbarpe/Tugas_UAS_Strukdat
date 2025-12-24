@@ -3,7 +3,7 @@
 #include <string.h>
 #include <time.h>
 
-// Global Config: 1 = AVL Mode (Auto Balance), 0 = BST Mode (Bisa Miring)
+// Global Config: 1 = AVL Mode (Auto Balance), 0 = BST Mode 
 int isAVL = 1; 
 
 typedef struct {
@@ -50,7 +50,30 @@ Node* createNode(long long timeID, char* title, char* desc, int duration) {
     return newNode;
 }
 
-// ------------------- Rotasi AVL ------------------ //
+void printTableHeader() {
+    printf("+----------+----------------------+------------------------------+----------+\n");
+    printf("| TimeID   | Title                | Description                  | Duration |\n");
+    printf("+----------+----------------------+------------------------------+----------+\n");
+}
+
+void printTableFooter() {
+    printf("+----------+----------------------+------------------------------+----------+\n");
+}
+
+void printDescriptionWrapped(const char *desc) {
+    int len = strlen(desc);
+    int descWidth = 28;
+    
+    if (len <= descWidth) {
+        // Short description - print as is
+        printf("%-*s", descWidth, desc);
+    } else {
+        // Long description - truncate and add "..."
+        printf("%-*.*s...", descWidth - 3, descWidth - 3, desc);
+    }
+}
+
+// ------------------- AVL Rotation ------------------ //
 
 Node* rightRotate(Node *y) {
     Node *x = y->left;
@@ -88,7 +111,7 @@ Node* minValueNode(Node* node) {
 }
 
 Node* insert(Node* node, long long timeID, char* title, char* desc, int duration) { 
-    // 1. Insert Normal
+    // 1. Normal Insert
     if (node == NULL) return createNode(timeID, title, desc, duration); 
     
     if (timeID < node->data.timeID)
@@ -101,7 +124,7 @@ Node* insert(Node* node, long long timeID, char* title, char* desc, int duration
     // 2. Update Height
     node->height = 1 + max(getHeight(node->left), getHeight(node->right)); 
 
-    // --- LOGIKA PEMISAH (Mode BST Stop Disini) ---
+    // --- Separataion Logic (Mode BST Stop) ---
     if (isAVL == 0) return node; 
 
     // 3. Balancing AVL
@@ -129,28 +152,28 @@ Node* insert(Node* node, long long timeID, char* title, char* desc, int duration
 Node* deleteNode(Node *node, long long timeID) {
     if (!node) return node;
 
-    // 1. Pencarian Node
+    // 1. Node Search
     if (timeID < node->data.timeID) 
         node->left = deleteNode(node->left, timeID);
     else if (timeID > node->data.timeID) 
         node->right = deleteNode(node->right, timeID);
     else {
-        // Node Ditemukan
-        // Kasus 1: Node dengan satu anak atau tanpa anak
+        // Node Found
+        // Case 1: Node with a child or no child
         if ((node->left == NULL) || (node->right == NULL)) {
             Node *temp = node->left ? node->left : node->right;
             
-            // Kasus Tanpa Anak
+            // No child case
             if (temp == NULL) {
                 temp = node;
                 node = NULL;
             } else { 
-                // Kasus Satu Anak
+                // One child case
                 *node = *temp; // Copy isi anak ke parent
             }
             free(temp);
         } else {
-            // Kasus 2: Node dengan dua anak
+            // Case 2: Node with two children
             Node *temp = minValueNode(node->right);
             node->data = temp->data;
             node->right = deleteNode(node->right, temp->data.timeID);
@@ -162,7 +185,7 @@ Node* deleteNode(Node *node, long long timeID) {
     // 2. Update Height
     node->height = 1 + max(getHeight(node->left), getHeight(node->right));
 
-    // --- LOGIKA PEMISAH (Mode BST Stop Disini) ---
+    // --- Separataion Logic (Mode BST Stop) ---
     if (isAVL == 0) return node;
 
     // 3. Balancing AVL
@@ -187,27 +210,112 @@ Node* search(Node* root, long long timeID) {
     return search(root->right, timeID); 
 } 
 
-// ------------------- VISUALISASI & OUTPUT ------------------ //
+// ------------------- Dinamic Database CSV -------------------
+
+// Prototype saveInorderToCSV
+void saveInorderToCSV(FILE* file, Node* node);
+
+void saveTreeToCSV(const char* filename, Node* root) {
+    FILE* file = fopen(filename, "w");
+    if (!file) {
+        printf("Gagal buat %s\n", filename);
+        return;
+    }
+    
+    fprintf(file, "timeID,title,description,duration\n");
+    saveInorderToCSV(file, root);
+    fclose(file);
+    printf("Saved %s\n", filename);
+}
+
+void saveInorderToCSV(FILE* file, Node* node) {
+    if (!node) return;
+    saveInorderToCSV(file, node->left);
+    fprintf(file, "%lld,\"%s\",\"%s\",%d\n", 
+            node->data.timeID, node->data.title, 
+            node->data.description, node->data.durationMinutes);
+    saveInorderToCSV(file, node->right);
+}
+
+Node* loadCSVToTree(Node* root, const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("No %s found, start fresh\n", filename);
+        return root;
+    }
+    
+    char line[300];
+    fgets(line, sizeof(line), file); // skip header
+    
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = 0;
+        
+        char* token = strtok(line, ";");
+        long long timeID = token ? atoll(token) : 0;
+        
+        // Title
+        token = strtok(NULL, ";"); 
+        char title[50] = "";
+        if (token) {
+            strncpy(title, token + 1, 48);          // lewati " depan
+            title[49] = '\0';
+            size_t len = strlen(title);
+            if (len > 0 && title[len - 1] == '"')   // buang " belakang
+                title[len - 1] = '\0';
+        }
+
+        // Description
+        token = strtok(NULL, ";"); 
+        char desc[100] = "";
+        if (token) {
+            strncpy(desc, token + 1, 98);
+            desc[99] = '\0';
+            size_t len = strlen(desc);
+            if (len > 0 && desc[len - 1] == '"')
+                desc[len - 1] = '\0';
+        }
+
+        
+        token = strtok(NULL, ";"); 
+        int duration = token ? atoi(token) : 0;
+        
+        root = insert(root, timeID, title, desc, duration);
+    }
+    fclose(file);
+    printf("Loaded CSV to %s tree\n", isAVL ? "AVL" : "BST");
+    return root;
+}
+
+// Auto-save wrapper
+Node* insertWithCSV(Node* node, long long timeID, char* title, char* desc, int duration) {
+    Node* result = insert(node, timeID, title, desc, duration);
+    saveTreeToCSV("ScheduleData.csv", result);
+    return result;
+}
+
+// ------------------- VISUALIZATION & OUTPUT ------------------ //
 
 void printTreeVisual(Node *root, int space) {
     int COUNT = 10; 
     if (root == NULL) return;
     space += COUNT;
     
-    // Anak Kanan (Cetak di Atas)
+    // Right child (Print above)
     printTreeVisual(root->right, space);
     
-    // Node Saat Ini
+    // Current node
     printf("\n");
     for (int i = COUNT; i < space; i++) printf(" ");
     printf("[%lld] H:%d\n", root->data.timeID % 10000, root->height);
     
-    // Anak Kiri (Cetak di Bawah)
+    // Left child (Print below)
     printTreeVisual(root->left, space);
 } 
 
 void printEvent(Event e) {
-    printf("   -> TimeID: %lld | %s (%d min)\n", e.timeID, e.title, e.durationMinutes);
+    printf("| %-*lld | %-*s | ", 8, e.timeID, 20, e.title);
+    printDescriptionWrapped(e.description);
+    printf(" | %-8d |\n", e.durationMinutes);
 }
 
 void inorderTraversal(Node* root) { 
@@ -229,89 +337,88 @@ void freeTree(Node* N) {
 // ------------------- MAIN ------------------ //
 int main () {
     Node *root = NULL;
-    int pilihan, modePilihan;
+    int choice, ChoiceMode;
     long long timeID;
     char title[50], desc[100];
-    int durasiMenit;
+    int duration;
+
+    // Data read from here
+    root = loadCSVToTree(root, "ScheduleData.csv");
     
     srand(time(0)); 
 
     printf("===================================\n");
-    printf("     SISTEM PENJADWALAN ACARA      \n");
+    printf("     Event Scheduling System      \n");
     printf("===================================\n");
-    printf("Pilih Metode Struktur Data:\n");
-    printf("1. BST Biasa (Tanpa Balancing)\n");
+    printf("Choose Data Structure Method:\n");
+    printf("1. BST (No Balancing)\n");
     printf("2. AVL Tree (Auto Balancing)\n");
-    printf("Pilihan: ");
-    scanf("%d", &modePilihan);
+    printf("choice: ");
+    scanf("%d", &ChoiceMode);
     getchar();
 
-    if (modePilihan == 1) { isAVL = 0; printf("\n[INFO] Mode: BST BIASA\n"); } 
-    else { isAVL = 1; printf("\n[INFO] Mode: AVL TREE\n"); 
-
-    // --- GENERATE DATA DINAMIS ---
-    printf("\nSedang meng-generate 10 Data Acara Dinamis (Acak)...\n");
-    const char *kegiatan[] = {"Rapat", "Kuliah", "Makan", "Tidur", "Gym", "Coding", "Nonton", "Main", "Belanja", "Jogging"};
-    
-    for (int i = 0; i < 10; i++) {
-        long long randomTime = 202512010000 + ((rand() % 30) * 100) + (rand() % 2400);
-        char randomTitle[50];
-        sprintf(randomTitle, "%s #%d", kegiatan[rand() % 10], rand() % 100);
-        int randomDurasi = 30 + (rand() % 151);
-        root = insert(root, randomTime, randomTitle, "Generated by System", randomDurasi);
-    }
-    printf("[OK] 10 Data berhasil digenerate.\n");
+    if (ChoiceMode == 1) { isAVL = 0; printf("\n[INFO] Mode: BST\n"); } 
+    else { isAVL = 1; printf("\n[INFO] Mode: AVL TREE\n"); }
 
     while (1) {
         printf("\n============= MENU (%s) ==============\n", isAVL ? "AVL" : "BST");
-        printf("1. Tambah Acara\n");
-        printf("2. Hapus Acara\n");
-        printf("3. Cari Acara\n");
-        printf("4. Lihat Daftar \n");
-        printf("5. Visualisasi\n");
-        printf("0. Keluar\n");
-        printf("Pilihan: ");
-        scanf("%d", &pilihan);
+        printf("1. Add Event\n");
+        printf("2. Delete Event\n");
+        printf("3. Find Event\n");
+        printf("4. List Lookup \n");
+        printf("5. Visualization\n");
+        printf("0. Exit\n");
+        printf("choice: ");
+        scanf("%d", &choice);
         getchar();
 
-        switch(pilihan) {
+        switch(choice) {
             case 1:
                 printf("TimeID: "); scanf("%lld", &timeID); getchar();
-                printf("Judul: "); fgets(title, 50, stdin); title[strcspn(title, "\n")] = 0;
-                printf("Deskripsi: "); fgets(desc, 100, stdin); desc[strcspn(desc, "\n")] = 0;
-                printf("Durasi: "); scanf("%d", &durasiMenit);
-                root = insert(root, timeID, title, desc, durasiMenit);
-                printf("Sukses!\n");
+                printf("Title: "); fgets(title, 50, stdin); title[strcspn(title, "\n")] = 0;
+                printf("Desc: "); fgets(desc, 100, stdin); desc[strcspn(desc, "\n")] = 0;
+                printf("Duration: "); scanf("%d", &duration); getchar();
+                root = insertWithCSV(root, timeID, title, desc, duration);
                 break;
             case 2:
-                printf("TimeID hapus: "); scanf("%lld", &timeID);
-                if(search(root, timeID)) {
+                printf("Delete TimeID: "); scanf("%lld", &timeID); getchar();
+                if (search(root, timeID)) {
                     root = deleteNode(root, timeID);
-                    printf("Terhapus.\n");
-                } else printf("Tidak ditemukan.\n");
+                    saveTreeToCSV("ScheduleData.csv", root);
+                    printf("Deleted & saved\n");
+                } else printf("Not Found\n");
                 break;
             case 3:
-                printf("Cari TimeID: "); scanf("%lld", &timeID);
-                Node* res = search(root, timeID);
-                if(res) printf("Ketemu: %s (H:%d)\n", res->data.title, res->height);
-                else printf("Tidak ketemu.\n");
+                printf("Find: "); scanf("%lld", &timeID); getchar();
+                Node* found = search(root, timeID);
+                if (found) {
+                    printf("\n--- Event Details ---\n");
+                    printf("TimeID: %lld\n", found->data.timeID);
+                    printf("Title: %s\n", found->data.title);
+                    printf("Description: %s\n", found->data.description);
+                    printf("Duration: %d minutes\n", found->data.durationMinutes);
+                } else {
+                    printf("No Data\n");
+                }
                 break;
+                
             case 4:
-                if(!root) printf("Kosong.\n");
+                if (!root) printf("Empty\n");
                 else {
-                    printf("\n--- Daftar Jadwal ---\n");
+                    printf("\n--- List (Sorted) ---\n");
+                    printTableHeader();
                     inorderTraversal(root);
+                    printTableFooter();
                 }
                 break;
             case 5:
-                if(!root) printf("Tree Kosong.\n");
-                else {
-                    printf("\n=== VISUALISASI ===\n");
-                    printTreeVisual(root, 0);
-                }
+                if (!root) printf("Empty \n");
+                else printTreeVisual(root, 0);
                 break;
             case 0:
+                saveTreeToCSV("ScheduleData.csv", root);
                 freeTree(root);
+                printf("Good bye!\n");
                 return 0;
         }
     }
