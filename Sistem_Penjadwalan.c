@@ -225,7 +225,6 @@ void saveTreeToCSV(const char* filename, Node* root) {
     fprintf(file, "timeID,title,description,duration\n");
     saveInorderToCSV(file, root);
     fclose(file);
-    printf("Saved %s\n", filename);
 }
 
 void saveInorderToCSV(FILE* file, Node* node) {
@@ -250,11 +249,11 @@ Node* loadCSVToTree(Node* root, const char* filename) {
     while (fgets(line, sizeof(line), file)) {
         line[strcspn(line, "\n")] = 0;
         
-        char* token = strtok(line, ";");
+        char* token = strtok(line, ",");
         long long timeID = token ? atoll(token) : 0;
         
         // Title
-        token = strtok(NULL, ";"); 
+        token = strtok(NULL, ","); 
         char title[50] = "";
         if (token) {
             strncpy(title, token + 1, 48);          // lewati " depan
@@ -265,7 +264,7 @@ Node* loadCSVToTree(Node* root, const char* filename) {
         }
 
         // Description
-        token = strtok(NULL, ";"); 
+        token = strtok(NULL, ","); 
         char desc[100] = "";
         if (token) {
             strncpy(desc, token + 1, 98);
@@ -276,7 +275,7 @@ Node* loadCSVToTree(Node* root, const char* filename) {
         }
 
         
-        token = strtok(NULL, ";"); 
+        token = strtok(NULL, ","); 
         int duration = token ? atoi(token) : 0;
         
         root = insert(root, timeID, title, desc, duration);
@@ -379,13 +378,14 @@ int main () {
                 printf("Desc: "); fgets(desc, 100, stdin); desc[strcspn(desc, "\n")] = 0;
                 printf("Duration: "); scanf("%d", &duration); getchar();
                 root = insertWithCSV(root, timeID, title, desc, duration);
+                printf("Event created!");
                 break;
             case 2:
                 printf("Delete TimeID: "); scanf("%lld", &timeID); getchar();
                 if (search(root, timeID)) {
                     root = deleteNode(root, timeID);
                     saveTreeToCSV("ScheduleData.csv", root);
-                    printf("Deleted & saved\n");
+                    printf("Deletetion success!\n");
                 } else printf("Not Found\n");
                 break;
             case 3:

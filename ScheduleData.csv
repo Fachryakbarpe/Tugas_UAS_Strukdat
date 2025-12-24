@@ -1,11 +1,11 @@
-timeID;title;description;duration
-1;"Rapat";"Diskusi Pendanaan Onegai 2026";90
-2;"GYM";"Leg day";180
-3;"Basket";"Olahraga bareng teman sd";60
-4;"Belajar";"Code review";120
-5;"Ngedate";"Tunjungan Plaza bawa 100k";150
-6;"Presentasi";"Presentasi demo program";75
-7;"Kunjungan";"Museum De Javasche";45
-8;"Webinar";"Tech talk 2026";30
-9;"Wawancara";"Panit Onegai 2026";15
-10;"Workshop";"Pelatihan JavaScript";240
+timeID,title,description,duration
+1,"Meeting","Onegai 2026 budget discusion",90
+2,"GYM","Leg day",180
+3,"Basket","Working out with childhood friend",60
+4,"Study","Code review",120
+5,"Dating","Tunjungan Plaza bring 100k",150
+6,"Presentation","Demo program",75
+7,"Visit","Museum De Javasche",45
+8,"Webinar","Tech talk 2026",30
+9,"Interview","Onegai 2026 comittee",15
+10,"Workshop","JavaScript 101",100
